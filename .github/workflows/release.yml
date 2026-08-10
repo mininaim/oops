@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # Native runners everywhere except macOS Intel, which Apple's
+          # toolchain cross-compiles cleanly from Apple Silicon.
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            run_tests: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            run_tests: false
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            run_tests: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            run_tests: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Use latest stable Rust
+        run: |
+          rustup update stable && rustup default stable
+          rustup target add ${{ matrix.target }}
+      - name: Test
+        if: matrix.run_tests
+        run: cargo test --locked
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Package
+        run: |
+          NAME="oops-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir -p "dist/$NAME"
+          cp "target/${{ matrix.target }}/release/oops" README.md LICENSE "dist/$NAME/"
+          tar -czf "dist/$NAME.tar.gz" -C dist "$NAME"
+          (cd dist && shasum -a 256 "$NAME.tar.gz" > "$NAME.tar.gz.sha256")
+      - name: Upload to the tag's GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist/*.tar.gz dist/*.tar.gz.sha256

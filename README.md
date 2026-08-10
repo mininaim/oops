@@ -54,13 +54,21 @@ No network, no telemetry, no AI, no shell hooks, no daemon. It also stays
 out of your file contents — it reads git metadata, not your code, and
 certainly not your `.env`.
 
-## Install (local development)
+## Install
+
+On macOS:
+
+```bash
+brew install mininaim/tap/oops
+```
+
+Prebuilt Linux binaries live on the
+[releases page](https://github.com/mininaim/oops/releases). To build from
+source instead (local development):
 
 ```bash
 cargo install --path .
 ```
-
-Or just `cargo build --release` and run `target/release/oops`.
 
 Requires a `git` binary on PATH. Exit code is 0 when oops ran (even if it
 found problems), 2 when it couldn't (not a repository, git missing).
